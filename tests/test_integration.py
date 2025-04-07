@@ -199,6 +199,9 @@ class TestAgentSetInteractionClass(unittest.TestCase):
         """Test removing from AgentSet creates correct update"""
         # First add and apply
         self.agent1.agents.add(self.agent2)
+        x = list(self.agent1.agents.raw_iter)
+        l = list(self.agent1.agents)
+        self.assertIn(self.agent2, self.agent1.agents)
         self.sim_state_manager.apply_updates(self.sim_agents.updates)
         
         # Clear updates

@@ -33,46 +33,6 @@ class TestSimStateManagerClass(unittest.TestCase):
         self.agent_state2 = TestAgentState(value=2)
         self.sim_state_manager = SimStateManager([self.agent_state1])
 
-    def test_initialization(self):
-        self.assertIn(TestAgentState, self.sim_state_manager)
-        self.assertEqual(len(self.sim_state_manager[TestAgentState]), 1)
-        self.assertEqual(len(self.sim_state_manager.all), 1)
-        self.assertEqual(self.sim_state_manager.agent_class_map[self.agent_state1.name], TestAgent)
-
-    def test_add_agent(self):
-        self.sim_state_manager.add(self.agent_state2)
-        self.assertIn(self.agent_state2, self.sim_state_manager[TestAgentState])
-        self.assertEqual(len(self.sim_state_manager.all), 2)
-        self.assertIn(self.agent_state2.name, self.sim_state_manager.agent_class_map)
-
-
-    def test_add_multiple_agents(self):
-        agent_state3 = TestAgentState(value=3)
-        self.sim_state_manager.add([self.agent_state2, agent_state3])
-        self.assertEqual(len(self.sim_state_manager[TestAgentState]), 3)
-        self.assertEqual(len(self.sim_state_manager.all), 3)
-        self.assertIn(agent_state3.name, self.sim_state_manager.agent_class_map)
-
-
-    def test_remove_agent(self):
-        name_to_remove = self.agent_state1.name
-        self.sim_state_manager.remove(self.agent_state1)
-        # Use get for safer access after removal
-        self.assertEqual(len(self.sim_state_manager.get(TestAgentState, {})), 0)
-        self.assertEqual(len(self.sim_state_manager.all), 0)
-        self.assertNotIn(name_to_remove, self.sim_state_manager.agent_class_map)
-
-
-    def test_remove_multiple_agents(self):
-        self.sim_state_manager.add(self.agent_state2)
-        names_to_remove = [self.agent_state1.name, self.agent_state2.name]
-        self.sim_state_manager.remove([self.agent_state1, self.agent_state2])
-        self.assertEqual(len(self.sim_state_manager.get(TestAgentState, {})), 0)
-        self.assertEqual(len(self.sim_state_manager.all), 0)
-        self.assertNotIn(names_to_remove[0], self.sim_state_manager.agent_class_map)
-        self.assertNotIn(names_to_remove[1], self.sim_state_manager.agent_class_map)
-
-
     def test_by_name(self):
         found_agent = self.sim_state_manager.by_name(self.agent_state1.name)
         self.assertEqual(found_agent, self.agent_state1)

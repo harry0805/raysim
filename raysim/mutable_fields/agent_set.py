@@ -33,6 +33,8 @@ class AgentSet(MutableBaseField, set[UUID]):
 
     def __iter__(self) -> Iterator['Agent']:
         """Returns an iterator over agent states."""
+        # print('Iterating! ', self)
+        a = super()
         for agent_id in super().__iter__():
             yield self._get_agent(agent_id)
     
@@ -54,10 +56,7 @@ class AgentSet(MutableBaseField, set[UUID]):
         return super().__contains__(name)
     
     def __repr__(self) -> str:
-        try:
-            return super().__repr__()
-        except RuntimeError:
-            return object.__repr__(self)
+        return f"AgentSet({{{', '.join(str(i) for i in self.raw_iter)}}})"
     
     def add(self, agent: AgentReference):
         """Add an agent to the set."""
