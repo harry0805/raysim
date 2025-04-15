@@ -6,7 +6,7 @@ from .base import AgentUpdate, SimUpdate
 
 if TYPE_CHECKING:
     from ..agents.base_state import AgentState
-    from ..simulation import SimStateManager
+    from ..simulation import SimState
 
 
 @dataclass
@@ -32,6 +32,23 @@ class AttrUpdate(AgentUpdate):
 
 
 @dataclass
+class NumericUpdate(AgentUpdate):
+    """Modify a numeric attribute for a state.
+
+    Attributes:
+        attr: The attribute to modify.
+        delta: The amount to add to the attribute.
+    """
+    attr: str
+    delta: int | float
+
+    def apply(self, context: 'AgentState'):
+        """Apply this update to change an attribute of the agent state."""
+        current_value = getattr(context, self.attr)
+        setattr(context, self.attr, current_value + self.delta)
+
+
+@dataclass
 class AgentAddUpdate(SimUpdate):
     """Add an agent to the simulation.
 
@@ -40,7 +57,7 @@ class AgentAddUpdate(SimUpdate):
     """
     agent: 'AgentState'
 
-    def apply(self, context: 'SimStateManager'):
+    def apply(self, context: 'SimState'):
         context.add(self.agent)
 
 
@@ -53,5 +70,5 @@ class AgentRemoveUpdate(SimUpdate):
     """
     agent_name: UUID
 
-    def apply(self, context: 'SimStateManager'):
+    def apply(self, context: 'SimState'):
         context.remove(context.by_name(self.agent_name))

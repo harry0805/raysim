@@ -1,12 +1,10 @@
-from typing import TYPE_CHECKING, Iterable, TypeVar
+from typing import Any, Iterable, overload
 from uuid import UUID
 
 from ..agents import Agent, AgentState
 from ..agents.utils import AgentReference, agent_ref
 from ..updating import AgentAddUpdate, AgentRemoveUpdate, Updates
 
-
-AgentLike = TypeVar('AgentLike', bound=Agent)
 
 class SimAgents(dict[type[Agent], list[Agent]]):
     """A dictionary-like object to give agents access to all agents in the current simulation.
@@ -16,14 +14,15 @@ class SimAgents(dict[type[Agent], list[Agent]]):
     """
     _agents_initialized: bool = False
     updates: Updates
+    agent_turn: UUID | None = None
     
     def __init__(self):
         super().__init__()
         self.updates = Updates()
     
-    def init_agents(self, agents: Iterable[AgentLike]):
+    def init_agents[TAgent: Agent](self, agents: Iterable[TAgent]):
         """Initialize the object with agents.
-        This method should only be used by the `SimStateManager` class.
+        This method should only be used by the `SimState` class.
         """
         if self._agents_initialized:
             raise RuntimeError("Agents already initialized.")
@@ -33,7 +32,17 @@ class SimAgents(dict[type[Agent], list[Agent]]):
             self[type(agent)].append(agent)
         self._agents_initialized = True
     
-    def __getitem__(self, key: type[AgentLike]) -> list[AgentLike]:
+    def set_turn(self, agent: AgentReference):
+        """Set which ever `Agent` has the turn to act in the simulation.
+        Only one `Agent` can have the turn at a time.
+        
+        The `Agent` that has the turn is the only one that can modify its state.
+        Agents can not modify other agents state directly.
+        This is to prevent conflicts during state updates.
+        """
+        self.agent_turn = agent_ref(agent)
+    
+    def __getitem__[TAgent: Agent](self, key: type[TAgent]) -> list[TAgent]:
         try:
             return super().__getitem__(key)  # type: ignore
         except KeyError:
@@ -53,23 +62,22 @@ class SimAgents(dict[type[Agent], list[Agent]]):
     
     def request_create_agent(self, agent: AgentState):
         """Request to create a new agent in the simulation.
-        The new agent will be created when `SimStateManager` applies the updates.
+        The new agent will be created when `SimState` applies the updates.
         """
         self.updates.add_sim_update(AgentAddUpdate(agent))
     
     def request_remove_agent(self, agent: AgentReference):
         """Request to remove an agent from the simulation.
-        This agent will be removed when `SimStateManager` applies the updates.
+        This agent will be removed when `SimState` applies the updates.
         """
         self.updates.add_sim_update(AgentRemoveUpdate(agent_ref(agent)))
 
 
-StateType = TypeVar('StateType', bound=AgentState)
-
-class SimStateManager(dict[type[AgentState], list[AgentState]]):
+class SimState(dict[type[AgentState], list[AgentState]]):
     """A dictionary like object to manage and apply updates to the simulation state."""
     step: int = 0
-    stage: str | None = None
+    stage: int | None = None
+    state_to_agent: dict[type[AgentState], type[Agent]]
 
     def __init__(self, agent_states: Iterable[AgentState]):
         super().__init__()
@@ -82,12 +90,22 @@ class SimStateManager(dict[type[AgentState], list[AgentState]]):
             if agent.name in exists:
                 continue
             self[type(agent)].append(agent)
+        
+        self.state_to_agent = {}
 
-    def __getitem__(self, key: type[StateType]) -> list[StateType]:
+    
+    @overload
+    def __getitem__[TState: AgentState](self, key: type[TState]) -> list[TState]: ...
+    @overload
+    def __getitem__(self, key: type[Agent]) -> list[Any]: ...
+    
+    def __getitem__[TState: AgentState](self, key: type[TState] | type[Agent]) -> list[TState]:
+        if issubclass(key, Agent):
+            key = key.state  # type: ignore
         try:
             return super().__getitem__(key)  # type: ignore
         except KeyError:
-            raise KeyError(f"Agent type {key.__name__} not found in the simulation")
+            raise KeyError(f"State type '{key.__name__}' not found in the simulation")
 
     def __repr__(self) -> str:
         items_str = ", ".join(f"{key.__name__}: {value}" for key, value in self.items())
@@ -98,11 +116,36 @@ class SimStateManager(dict[type[AgentState], list[AgentState]]):
         """Return a list of all agents in the simulation."""
         return [agent for agent_list in self.values() for agent in agent_list]
 
+    def register_agent_to_state(self, pairs: dict[type[AgentState], type[Agent]]):
+        """Register each agent state with its corresponding agent class."""
+        self.state_to_agent.update(pairs)
+    
     def to_agents(self) -> SimAgents:
         """Create a `SimAgents` object with current state of in the simulation."""
+        # Check if all agent states are registered with their agent classes
+        registered = set(self.state_to_agent.keys())
+        existing = set(self.keys())
+        if not existing.issubset(registered):
+            missing = existing - registered
+            raise ValueError(f"Not all AgentStates are registered with their Agent classes. Missing: {tuple(missing)}")
+        
+        # Create a `SimAgents` object with the current state of the simulation
         sim_agents = SimAgents()
-        sim_agents.init_agents([state.agent()(state, sim_agents) for state in self.all])
+        agents = [self.state_to_agent[type(state)](state, sim_agents) for state in self.all]
+        sim_agents.init_agents(agents)
         return sim_agents
+    
+    def get_names(self, agent_type: type[AgentState] | None = None) -> list[UUID]:
+        """Get the names of all agents in the simulation.
+        
+        Args:
+            agent_type: The type of agent to get names for. If None, get names for all agents.
+        
+        Returns:
+            A list of UUIDs representing the names of the agents.
+        """
+        agents = self.get(agent_type, self.all)  # type: ignore
+        return [a.name for a in agents]
 
     def by_name(self, agent_name: UUID) -> AgentState:
         """Get the agent with a given name in the simulation."""
@@ -111,7 +154,7 @@ class SimStateManager(dict[type[AgentState], list[AgentState]]):
         except StopIteration:
             raise ValueError(f"Could not find agent with ID: {agent_name}")
 
-    def add(self, agent: StateType | Iterable[StateType]):
+    def add[TState: AgentState](self, agent: TState | Iterable[TState]):
         """Add a single agent or multiple agents to the simulation."""
         if isinstance(agent, AgentState):
             agent = [agent]
@@ -123,7 +166,7 @@ class SimStateManager(dict[type[AgentState], list[AgentState]]):
             agent_list.append(a)
             self[type(a)] = agent_list
 
-    def remove(self, agent: StateType | Iterable[StateType]):
+    def remove[TState: AgentState](self, agent: TState | Iterable[TState]):
         """Remove a single agent or multiple agents from the simulation."""
         if isinstance(agent, AgentState):
             agent = [agent]
@@ -142,3 +185,9 @@ class SimStateManager(dict[type[AgentState], list[AgentState]]):
         
         for update in updates.sim_updates:
             update.apply(self)
+    
+    # def to_json(self) -> dict[str, list[dict[str, Any]]]:
+    #     json_data = {}
+    #     for agent_type, agents in self.items():
+    #         json_data[agent_type.__name__] = 
+    #         for agent in agents:

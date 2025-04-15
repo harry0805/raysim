@@ -1,10 +1,8 @@
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from .base_state import AgentState
-
 if TYPE_CHECKING:
-    from ..agents import Agent
+    from ..agents import Agent, AgentState
 
 type AgentReference = 'UUID | AgentState | Agent'
 

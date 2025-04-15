@@ -41,7 +41,7 @@ class TestAgentClass(unittest.TestCase):
         # Minimal setup to instantiate Agent for basic tests
         # Requires a dummy SimAgents context
         self.agent_state = TestAgentState(value=1) # Remove agent=TestAgent
-        # In a real scenario, SimAgents would be created by SimStateManager
+        # In a real scenario, SimAgents would be created by SimState
         # For isolated agent tests, we might need a mock or minimal SimAgents
         class MockSimAgents:
             updates = None # Mock updates if needed for specific tests

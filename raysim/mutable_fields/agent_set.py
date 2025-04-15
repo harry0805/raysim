@@ -43,12 +43,9 @@ class AgentSet(MutableBaseField, set[UUID]):
         """Returns an iterator over the raw agent names."""
         return super().__iter__()
     
-    def __deepcopy__(self, memo):
-        """Return a deep copy of the set."""
-        new_set = AgentSet()
-        for agent in self.raw_iter:
-            new_set.add(agent)
-        return new_set
+    def copy(self) -> 'AgentSet':
+        """Return a shallow copy of the set."""
+        return AgentSet(self.raw_iter)
 
     def __contains__(self, agent: Any) -> bool:
         """Check if an agent is in the set."""
@@ -66,7 +63,7 @@ class AgentSet(MutableBaseField, set[UUID]):
         # When given a context, add an update to the owner
         if self.context:
             attr, owner = self.context
-            owner.add_update(AgentSetUpdate(attr, add=(name,)))
+            owner.register_update(AgentSetUpdate(attr, add=(name,)))
         super().add(name)
     
     def update(self, agents: Iterable[AgentReference]):
@@ -79,7 +76,7 @@ class AgentSet(MutableBaseField, set[UUID]):
         # When given a context, add an update to the owner
         if self.context:
             attr, owner = self.context
-            owner.add_update(AgentSetUpdate(attr, remove=(name,)))
+            owner.register_update(AgentSetUpdate(attr, remove=(name,)))
 
     def discard(self, agent: AgentReference):
         """Remove an agent from the set if it is a member."""

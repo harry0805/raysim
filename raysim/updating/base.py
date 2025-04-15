@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Iterable, Self
 
 if TYPE_CHECKING:
     from ..agents.base_state import AgentState
-    from ..simulation import SimStateManager
+    from ..simulation import SimState
 
 
 class Update(ABC):
@@ -11,8 +11,8 @@ class Update(ABC):
     Use this only for type checking.
     """
     @abstractmethod
-    def apply(self, sim_state: 'AgentState | SimStateManager'):
-        """Apply this update to the given `SimStateManager` object."""
+    def apply(self, sim_state: 'AgentState | SimState'):
+        """Apply this update to the given `SimState` object."""
         pass
     
     def replacement(self, updates: Iterable[Self]) -> None | tuple[int, Self]:
@@ -40,6 +40,6 @@ class SimUpdate(Update):
     Only used for adding/removing agents.
     """
     @abstractmethod
-    def apply(self, sim_state: 'SimStateManager'):
-        """Apply this update to the given `SimStateManager` object."""
+    def apply(self, sim_state: 'SimState'):
+        """Apply this update to the given `SimState` object."""
         pass

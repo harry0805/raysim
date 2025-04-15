@@ -1,5 +1,6 @@
 from types import MethodType
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Self
+from copy import copy
 
 if TYPE_CHECKING:
     from ..agents import Agent
@@ -9,14 +10,23 @@ _MISSING = object()
 
 class MutableBaseField:
     """Base class for mutable fields in the simulation."""    
-    context: Optional[tuple[str, 'Agent']]
+    context: Optional[tuple[str, 'Agent']] = None
     _context_required_error = RuntimeError(
-        "Current context is not set. Contextual actions can only be done in the MutableFieldProxy class."
+        "Current context is not set. Contextual actions can only be done after the context is set."
     )
     
-    def __init__(self):
-        super().__init__()
-        self.context = None
+    def __getstate__(self) -> dict:
+        return {k: v for k, v in self.__dict__.items() if k != 'context'}
+
+    def set_context(self, attr: str, owner: 'Agent'):
+        """Set the context for the field.
+        This method should only be called internally by the `Agent` class.
+        """
+        self.context = (attr, owner)
+    
+    def copy(self) -> Self:
+        """Returns a copy of the field."""
+        return copy(self)
 
 
 magic_methods = [

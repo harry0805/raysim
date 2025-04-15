@@ -3,7 +3,7 @@ import uuid
 from dataclasses import dataclass, field
 
 # Assuming new locations
-from raysim.simulation import SimStateManager, SimAgents
+from raysim.simulation import SimState, SimAgents
 from raysim.agents import AgentState, Agent
 from raysim.mutable_fields import AgentSet
 from raysim.updating import AgentAddUpdate, AgentRemoveUpdate
@@ -27,11 +27,11 @@ except ImportError:
 
 # --- Test Classes ---
 
-class TestSimStateManagerClass(unittest.TestCase):
+class TestSimStateClass(unittest.TestCase):
     def setUp(self):
         self.agent_state1 = TestAgentState(value=1)
         self.agent_state2 = TestAgentState(value=2)
-        self.sim_state_manager = SimStateManager([self.agent_state1])
+        self.sim_state_manager = SimState([self.agent_state1])
 
     def test_by_name(self):
         found_agent = self.sim_state_manager.by_name(self.agent_state1.name)
@@ -70,7 +70,7 @@ class TestSimAgentsClass(unittest.TestCase):
     def setUp(self):
         self.agent_state1 = TestAgentState(value=1)
         self.agent_state2 = TestAgentState(value=2)
-        self.sim_state_manager = SimStateManager([self.agent_state1, self.agent_state2])
+        self.sim_state_manager = SimState([self.agent_state1, self.agent_state2])
         self.sim_agents = self.sim_state_manager.to_agents()
         # Retrieve agent instances from SimAgents for convenience
         self.agent1 = self.sim_agents.by_name(self.agent_state1.name)

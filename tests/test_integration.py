@@ -3,7 +3,7 @@ import uuid
 from dataclasses import field
 
 # Import from main raysim package
-from raysim import Agent, AgentState, SimStateManager, SimAgents
+from raysim import Agent, AgentState, SimState, SimAgents
 from raysim.mutable_fields import AgentSet
 from raysim.updating import Update, AttrUpdate, AgentAddUpdate, AgentRemoveUpdate, Updates
 from raysim.mutable_fields.agent_set import AgentSetUpdate
@@ -33,10 +33,10 @@ class TestBasicInteractionClass(unittest.TestCase):
         self.agent_state1 = TestAgentState(value=1)
         self.agent_state2 = TestAgentState(value=2)
         
-        # Initialize SimStateManager with agent states
-        self.sim_state_manager = SimStateManager([self.agent_state1, self.agent_state2])
+        # Initialize SimState with agent states
+        self.sim_state_manager = SimState([self.agent_state1, self.agent_state2])
         
-        # Create SimAgents from SimStateManager
+        # Create SimAgents from SimState
         self.sim_agents = self.sim_state_manager.to_agents()
         
         # Get Agent instances from SimAgents
@@ -84,10 +84,10 @@ class TestUpdateGenerationClass(unittest.TestCase):
         self.agent_state1 = TestAgentState(value=1)
         self.agent_state2 = TestAgentState(value=2)
         
-        # Initialize SimStateManager with agent states
-        self.sim_state_manager = SimStateManager([self.agent_state1, self.agent_state2])
+        # Initialize SimState with agent states
+        self.sim_state_manager = SimState([self.agent_state1, self.agent_state2])
         
-        # Create SimAgents from SimStateManager
+        # Create SimAgents from SimState
         self.sim_agents = self.sim_state_manager.to_agents()
         
         # Get Agent instances from SimAgents
@@ -147,10 +147,10 @@ class TestAgentSetInteractionClass(unittest.TestCase):
         self.agent_state1 = TestAgentState(value=1)
         self.agent_state2 = TestAgentState(value=2)
         
-        # Initialize SimStateManager with agent states
-        self.sim_state_manager = SimStateManager([self.agent_state1, self.agent_state2])
+        # Initialize SimState with agent states
+        self.sim_state_manager = SimState([self.agent_state1, self.agent_state2])
         
-        # Create SimAgents from SimStateManager
+        # Create SimAgents from SimState
         self.sim_agents = self.sim_state_manager.to_agents()
         
         # Get Agent instances from SimAgents
@@ -248,10 +248,10 @@ class TestSimUpdateClass(unittest.TestCase):
         self.agent_state1 = TestAgentState(value=1)
         self.agent_state2 = TestAgentState(value=2)
         
-        # Initialize SimStateManager with agent states
-        self.sim_state_manager = SimStateManager([self.agent_state1, self.agent_state2])
+        # Initialize SimState with agent states
+        self.sim_state_manager = SimState([self.agent_state1, self.agent_state2])
         
-        # Create SimAgents from SimStateManager
+        # Create SimAgents from SimState
         self.sim_agents = self.sim_state_manager.to_agents()
         
         # Get Agent instances from SimAgents
@@ -307,10 +307,10 @@ class TestComplexUpdateScenarioClass(unittest.TestCase):
         self.agent_state1 = TestAgentState(value=1)
         self.agent_state2 = TestAgentState(value=2)
         
-        # Initialize SimStateManager with agent states
-        self.sim_state_manager = SimStateManager([self.agent_state1, self.agent_state2])
+        # Initialize SimState with agent states
+        self.sim_state_manager = SimState([self.agent_state1, self.agent_state2])
         
-        # Create SimAgents from SimStateManager
+        # Create SimAgents from SimState
         self.sim_agents = self.sim_state_manager.to_agents()
         
         # Get Agent instances from SimAgents

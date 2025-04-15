@@ -1,24 +1,34 @@
-class MySuper(super):
-    pass
+import pickle
 
-class Base:
-    def greet(self):
-        print("Hello from Base")
+class test:
+    def __init__(self, a):
+        self.a = a
+        self.b = None
+    
+    @staticmethod
+    def wrapper(func):
+        """Decorator to wrap a function with a context manager."""
+        def wrapped_func(*args, _func=func, **kwargs):
+            print("Entering wrapper")
+            try:
+                return _func(*args, **kwargs)
+            finally:
+                print("Exiting wrapper")
+        return wrapped_func
 
-class FriendlyMixin:
-    def greet(self):
-        print("FriendlyMixin says hi")
-        MySuper().greet()
+    @wrapper
+    def test_func(self):
+        print("Inside test_func")
+        self.b = 2
+        return self.a + self.b
 
-class EnthusiasticMixin:
-    def greet(self):
-        print("EnthusiasticMixin is excited!")
-        MySuper().greet()
+t = test(123)
+b = t.test_func()
+print(b)
 
-class Greeter(EnthusiasticMixin, FriendlyMixin, Base):
-    def greet(self):
-        print("Greeter starting")
-        MySuper().greet()
-
-g = Greeter()
-g.greet()
+dump = pickle.dumps(t)
+loaded = pickle.loads(dump)
+print(loaded)
+print(loaded.a)
+print(loaded.b)
+print(loaded.test_func())
