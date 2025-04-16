@@ -115,7 +115,7 @@ class AgentSetUpdate(AgentUpdate):
         for agent in self.remove:
             attr.discard(agent)
     
-    def replacement(self, updates: Iterable['AgentSetUpdate']) -> None | tuple[int, 'AgentSetUpdate']:
+    def squash(self, updates: Iterable['AgentSetUpdate']) -> None | tuple[int, 'AgentSetUpdate']:
         """Check if this update can replace or combine with an existing update."""
         for i, update in enumerate(updates):
             if isinstance(update, AgentSetUpdate) and update.attr == self.attr:

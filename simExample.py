@@ -32,13 +32,13 @@ staging = Staging().add((ExampleAgent, ExampleAgent.random_send))
 def main():
     # Construct the initial state of the simulation and create the simulation object
     sim = create_simulation((ExampleAgent.state(funds=f) for f in starting), staging=staging)
-    sim.run(3)
-    print('Complete!')
-    
-    agents = sim.sim_state[ExampleAgent.state]
-    print('Final funds:')
-    for agent in agents:
-        print(f"{agent.name}: {agent.funds}")
+    for step, state in enumerate(sim.simulate(3)):
+        print(f"--------------Step {step + 1}--------------")
+        agents = state[ExampleAgent.state]
+        print('Agent Funds:')
+        for agent in agents:
+            print(f"{agent.name}: {agent.funds}")
+
 
 if __name__ == "__main__":
     main()

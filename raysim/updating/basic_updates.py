@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Iterable
 from uuid import UUID
 
-from .base import AgentUpdate, SimUpdate
+from .base import Update, AgentUpdate, SimUpdate
 
 if TYPE_CHECKING:
     from ..agents.base_state import AgentState
@@ -17,6 +17,8 @@ class AttrUpdate(AgentUpdate):
         attr: The attribute to modify.
         value: The new value of the attribute.
     """
+    priority = 0
+    
     attr: str
     value: Any
 
@@ -24,11 +26,13 @@ class AttrUpdate(AgentUpdate):
         """Apply this update to change an attribute of the agent state."""
         setattr(context, self.attr, self.value)
     
-    def replacement(self, updates: Iterable['AttrUpdate']) -> None | tuple[int, 'AttrUpdate']:
-        for i, update in enumerate(updates):
-            if isinstance(update, AttrUpdate) and update.attr == self.attr:
-                return i, self
-        return None
+    @staticmethod
+    def squash(updates: list[Update]) -> None:
+        attr_updates = [u for u in updates if isinstance(u, AttrUpdate)]
+        latest_updates = {}
+        for update in attr_updates:
+            latest_updates[update.attr] = update
+        updates[:] = [u for u in updates if not isinstance(u, AttrUpdate)] + list(latest_updates.values())
 
 
 @dataclass
@@ -39,6 +43,8 @@ class NumericUpdate(AgentUpdate):
         attr: The attribute to modify.
         delta: The amount to add to the attribute.
     """
+    priority = 5
+    
     attr: str
     delta: int | float
 
@@ -55,6 +61,8 @@ class AgentAddUpdate(SimUpdate):
     Attributes:
         agent: The agent to add.
     """
+    priority = 101
+    
     agent: 'AgentState'
 
     def apply(self, context: 'SimState'):
@@ -68,6 +76,8 @@ class AgentRemoveUpdate(SimUpdate):
     Attributes:
         agent_name: The name of the agent to remove.
     """
+    priority = 100
+    
     agent_name: UUID
 
     def apply(self, context: 'SimState'):

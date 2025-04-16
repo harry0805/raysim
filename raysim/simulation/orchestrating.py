@@ -79,6 +79,7 @@ def task_executor(agent_name: UUID, method_name: str, sim_state: SimState) -> Up
     # Execute the method on the target agent
     getattr(target_agent, method_name)()
     
+    all_agents.updates.squash()
     # Return only the updates instead of the whole state
     return all_agents.updates
 
@@ -122,16 +123,25 @@ class Simulation:
                         updates_list = [updates_list]
                     [self.apply_updates(u) for u in updates_list]
 
-    def step(self):
-        """Run the next step in the simulation."""
-        self.sim_state.step += 1
-        for idx, stage_tasks in enumerate(self.staging):
-            self.sim_state.stage = idx
-            self.execute_stage(stage_tasks)
+    def step(self, steps: int = 1) -> Iterator[SimState]:
+        """Run the simulation in steps."""
+        for _ in range(steps):
+            self.sim_state.step += 1
+            for idx, stage_tasks in enumerate(self.staging):
+                self.sim_state.stage = idx
+                self.execute_stage(stage_tasks)
+            yield self.sim_state
     
-    def run(self, steps: int):
-        """Run the simulation for a specified number of steps."""
-        [self.step() for _ in tqdm(range(steps))]
+    def run(self, steps: int) -> SimState:
+        """Run the simulation for a specified number of steps.
+        
+        Returns:
+            The last state of the simulation after running the specified number of steps.
+        """
+        if steps < 1:
+            raise ValueError("Steps must be greater than 0.")
+        *_, last_state = self.step(steps)
+        return last_state
 
 
 def create_simulation(states: Iterable[AgentState], staging: Staging) -> Simulation:
