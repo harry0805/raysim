@@ -1,5 +1,6 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Optional
 from uuid import UUID
 
 from ..agents.utils import AgentReference, agent_ref
@@ -115,7 +116,7 @@ class AgentSetUpdate(AgentUpdate):
         for agent in self.remove:
             attr.discard(agent)
     
-    def squash(self, updates: Iterable['AgentSetUpdate']) -> None | tuple[int, 'AgentSetUpdate']:
+    def replacement(self, updates: list['AgentSetUpdate']) -> Optional[tuple[int, 'AgentSetUpdate']]:
         """Check if this update can replace or combine with an existing update."""
         for i, update in enumerate(updates):
             if isinstance(update, AgentSetUpdate) and update.attr == self.attr:
@@ -124,3 +125,13 @@ class AgentSetUpdate(AgentUpdate):
                 new_remove = set(self.remove) - set(update.add)
                 return i, AgentSetUpdate(self.attr, tuple(new_add), tuple(new_remove))
         return None
+    
+    @staticmethod
+    def squash(updates: list['AgentSetUpdate']) -> list['AgentSetUpdate']:
+        """Squash multiple `AgentSetUpdate` instances into a minimal set.
+
+        Combines multiple updates for the same attribute into a single update,
+        ensuring minimal operations to achieve the same final state.
+        """
+        # Placeholder, will be implemented in the future
+        return updates

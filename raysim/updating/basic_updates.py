@@ -1,8 +1,9 @@
+from collections import OrderedDict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from .base import Update, AgentUpdate, SimUpdate
+from .base import AgentUpdate, SimUpdate
 
 if TYPE_CHECKING:
     from ..agents.base_state import AgentState
@@ -23,16 +24,26 @@ class AttrUpdate(AgentUpdate):
     value: Any
 
     def apply(self, context: 'AgentState'):
-        """Apply this update to change an attribute of the agent state."""
+        """Apply this update to change an attribute of the agent state."""        
         setattr(context, self.attr, self.value)
     
     @staticmethod
-    def squash(updates: list[Update]) -> None:
-        attr_updates = [u for u in updates if isinstance(u, AttrUpdate)]
-        latest_updates = {}
-        for update in attr_updates:
-            latest_updates[update.attr] = update
-        updates[:] = [u for u in updates if not isinstance(u, AttrUpdate)] + list(latest_updates.values())
+    def squash(updates: list['AttrUpdate']) -> list['AttrUpdate']:
+        """Squash multiple AttrUpdate instances into a minimal set.
+        
+        When multiple AttrUpdate instances modify the same attribute,
+        only the last one will have an effect. This method combines them
+        into a single update with the final value for each attribute.
+        """
+        # Use OrderedDict to track attributes in order of first appearance
+        attr_to_update = OrderedDict[str, AttrUpdate]()
+        
+        # Process updates in original order (last one overwrites previous ones)
+        for update in updates:
+            attr_to_update[update.attr] = update
+        
+        # Return values directly - OrderedDict maintains insertion order
+        return list(attr_to_update.values())
 
 
 @dataclass
@@ -49,7 +60,7 @@ class NumericUpdate(AgentUpdate):
     delta: int | float
 
     def apply(self, context: 'AgentState'):
-        """Apply this update to change an attribute of the agent state."""
+        """Apply this update to change an attribute of the agent state."""        
         current_value = getattr(context, self.attr)
         setattr(context, self.attr, current_value + self.delta)
 

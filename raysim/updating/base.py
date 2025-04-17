@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Iterable, Self, Sequence
+from typing import TYPE_CHECKING, ClassVar, Iterable, Self, Sequence
 
 if TYPE_CHECKING:
     from ..agents.base_state import AgentState
@@ -13,7 +13,7 @@ class Update(ABC):
     Attributes:
         priority: The priority of the update. Lower values are applied first.
     """
-    priority: int = 0
+    priority: ClassVar[int] = 0
     
     @abstractmethod
     def apply(self, sim_state: 'AgentState | SimState'):
@@ -21,7 +21,7 @@ class Update(ABC):
         pass
     
     @staticmethod
-    def squash(updates: Sequence['Update']) -> Sequence['Update']:
+    def squash[UType: 'Update'](updates: list[UType]) -> list[UType]:
         """When multiple updates can be replaced by fewer updates,
         this `staticmethod` can be implemented to combine them.
         This can be used to optimize the updates size.
@@ -31,8 +31,12 @@ class Update(ABC):
             we can combine them into a single `AttrUpdate` with the final value.
         
         This method will be called with a list of all potentially combinable updates.
-        The output should be a new list, containing the updates after squashing.
+        Which only includes updates of that type.
+        The output should be an updated list with the result of the combination.
         Keep all not combinable updates as is.
+        
+        > **Note**: The order of the updates matters, if updates have the same priority,
+        > they will be applied in the order they are in the list.
         
         Overwrite this method to implement the logic for your update if it is applicable.
         Make sure it is a `staticmethod`.

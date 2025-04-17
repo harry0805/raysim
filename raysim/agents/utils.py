@@ -4,7 +4,7 @@ from uuid import UUID
 if TYPE_CHECKING:
     from ..agents import Agent, AgentState
 
-type AgentReference = 'UUID | AgentState | Agent'
+type AgentReference = UUID | AgentState | Agent
 
 def agent_ref(agent: AgentReference) -> UUID:
     """Get the name of an agent reference."""

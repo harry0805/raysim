@@ -72,3 +72,10 @@ class Agent:
     
     def __repr__(self) -> str:
         return f"Agent({str(self._state.name)})"
+    
+    def remove_agent(self):
+        """Remove this agent from the simulation.
+        
+        This method will notify the simulation the current agent is to be removed in the next stage.
+        """
+        self.all_agents.request_remove_agent(self._state.name)

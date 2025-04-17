@@ -1,5 +1,6 @@
 from bisect import bisect_right
-from typing import TYPE_CHECKING, Iterable, cast
+from collections import defaultdict
+from typing import TYPE_CHECKING, Iterable
 from uuid import UUID
 
 from .base import Update, SimUpdate, AgentUpdate
@@ -7,58 +8,27 @@ from .base import Update, SimUpdate, AgentUpdate
 if TYPE_CHECKING:
     from ..simulation import SimState
 
-class UpdatesList[UType: Update]:
-    """A list of updates sorted by priority."""
-    def __init__(self):
-        self.u_store: list[UType] = []
-    
-    def add(self, update: UType):
-        """Add an update to the list."""
-        insertion = bisect_right(self.u_store, update.priority, key=lambda u: u.priority)
-        self.u_store.insert(insertion, update)
-    
-    def priorities(self) -> list[int]:
-        """Get the list of priorities in the list."""
-        return sorted(set(u.priority for u in self.u_store))
-    
-    def priority_iter(self) -> Iterable[list[UType]]:
-        """Yield updates sorted by priority."""
-        for priority in sorted(self.u_store.keys()):
-            yield self.u_store[priority]
 
-    def __iter__(self) -> Iterable[UType]:
-        """Iterate over all updates in the list."""
-        for updates in self.priority_iter():
-            yield from updates
-
-    def __getitem__(self, priority: int) -> list[UType]:
-        """Get the updates for a given priority."""
-        return self.u_store.get(priority, [])
+def optimize_updates_list[UType: Update](updates: Iterable[UType]) -> list[UType]:
+    """Remove or combine updates if able based on the
+    `Update.squash()` method for each update type.
+    """
+    # Organize updates by their types in a dictionary
+    org_updates = defaultdict[type[UType], list[UType]](list)
+    for update in updates:
+        org_updates[type(update)].append(update)
     
-    def squash(self):
-        """Remove all redundant updates inside this `UpdatesList`."""
-        pass
+    # Loop through each update type based on their priority set in that class
+    for u_type in sorted(org_updates.keys(), key=lambda u: u.priority):
+        # Apply the squash method for that update type
+        org_updates[u_type] = u_type.squash(org_updates[u_type])
+    
+    # Return the flattened updates in a single list
+    return [update for updates in org_updates.values() for update in updates]
 
 
-class AgentUpdatesStore(dict[UUID, UpdatesList[AgentUpdate]]):
-    """A dictionary to store updates for each agent."""
-    def priority_iter(self) -> Iterable[list[AgentUpdate]]:
-        """Iterate though all updates by priority."""
-        # Get the possible priorities from all updates lists
-        priorities = sorted(set(p for u_list in self.values() for p in u_list.priorities()))
-        for p in priorities:
-            yield [u for u_list in self.values() for u in u_list[p]]
-    
-    def add(self, agent_name: UUID, update: AgentUpdate):
-        """Add an agent update to the simulation which modifies an `AgentState`."""
-        if agent_name not in self:
-            self[agent_name] = UpdatesList()
-        self[agent_name].add(update)
-    
-    def squash_all(self):
-        """Remove all redundant updates."""
-        [updates.squash() for updates in self.values()]
-
+type USimList = list[SimUpdate]
+type UAgentsStore = defaultdict[UUID, list[AgentUpdate]]
 
 class Updates:
     """An object to store updates for the simulation.
@@ -69,25 +39,50 @@ class Updates:
     """
     def __init__(self):
         super().__init__()
-        self.sim_updates = UpdatesList[SimUpdate]()
-        self.agent_updates = AgentUpdatesStore()
+        self.sim_updates: USimList = []
+        self.agent_updates: UAgentsStore = defaultdict(list)
 
     def add(self, agent_name: UUID, update: AgentUpdate):
         """Add an agent update to the simulation which modifies an `AgentState`."""
-        self.agent_updates.add(agent_name, update)
+        self.agent_updates[agent_name].append(update)
     
     def add_sim_update(self, update: SimUpdate):
         """Add a simulation update to the simulation which modifies the simulation structure."""
-        self.sim_updates.add(update)
+        self.sim_updates.append(update)
     
-    def squash(self):
+    def optimize(self):
         """Remove all redundant updates.
         Remove or combine updates if able based on the `Update.squash()` method.
         """
-        self.sim_updates.squash()
-        self.agent_updates.squash_all()
+        self.sim_updates = optimize_updates_list(self.sim_updates)
+        self.agent_updates = defaultdict(list, {agent: optimize_updates_list(updates) for agent, updates in self.agent_updates.items()})
 
 
-def apply_all_updates(sim_state: 'SimState', updates: Iterable[Updates]):
+def apply_all_updates(sim_state: 'SimState', all_updates: Iterable[Updates]):
     """Apply all updates to the simulation state."""
-    pass
+    # TODO: This function could be optimized further
+    
+    # Collect all updates from all Updates objects
+    sim_updates: list[SimUpdate] = []
+    agent_updates_list: list[tuple[UUID, AgentUpdate]] = []
+    
+    for updates in all_updates:
+        # Add simulation updates
+        sim_updates.extend(updates.sim_updates)
+        
+        # Add agent updates with their associated agent ID
+        for agent_name, agent_update_list in updates.agent_updates.items():
+            for agent_update in agent_update_list:
+                agent_updates_list.append((agent_name, agent_update))
+    
+    # Sort updates by priority (lowest to highest)
+    sim_updates.sort(key=lambda update: update.priority)
+    agent_updates_list.sort(key=lambda pair: pair[1].priority)
+    
+    # Apply agent updates
+    for agent_name, update in agent_updates_list:
+        update.apply(sim_state.by_name(agent_name))
+    
+    # Apply simulation updates
+    for update in sim_updates:
+        update.apply(sim_state)

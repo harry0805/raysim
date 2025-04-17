@@ -21,24 +21,29 @@ class ExampleAgent(FundsAgent):
 
 
 # starting = [random.randint(1000, 2000) for _ in range(10)]
-starting = [1000 for _ in range(3)]
+starting = [1000 for _ in range(100)]
 print(starting)
 print('total:', sum(starting))
 
 # Specify the staging pattern for the simulation
 staging = Staging().add((ExampleAgent, ExampleAgent.random_send))
 
-
 def main():
     # Construct the initial state of the simulation and create the simulation object
     sim = create_simulation((ExampleAgent.state(funds=f) for f in starting), staging=staging)
-    for step, state in enumerate(sim.simulate(3)):
-        print(f"--------------Step {step + 1}--------------")
+    for step, state in enumerate(sim.step(100)):
+        # print(f"--------------Step {step + 1}--------------")
         agents = state[ExampleAgent.state]
-        print('Agent Funds:')
-        for agent in agents:
-            print(f"{agent.name}: {agent.funds}")
+        
+        print(f"Total Funds at step {step + 1}: {sum(agent.funds for agent in agents)}")
 
+        # Calculate the Gini coefficient
+        funds = [agent.funds for agent in agents]
+        funds.sort()
+        n = len(funds)
+        cumulative = sum((i + 1) * fund for i, fund in enumerate(funds))
+        gini = (2 * cumulative) / (n * sum(funds)) - (n + 1) / n
+        print(f"Gini Coefficient at step {step + 1}: {gini:.4f}")
 
 if __name__ == "__main__":
     main()

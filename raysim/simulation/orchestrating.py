@@ -6,7 +6,7 @@ from collections import deque
 import ray
 from tqdm import tqdm
 
-from ..updating import Updates
+from ..updating import Updates, apply_all_updates
 from ..agents import Agent, AgentState
 from .management import SimState
 
@@ -79,8 +79,8 @@ def task_executor(agent_name: UUID, method_name: str, sim_state: SimState) -> Up
     # Execute the method on the target agent
     getattr(target_agent, method_name)()
     
-    all_agents.updates.squash()
-    # Return only the updates instead of the whole state
+    # Optimize the updates before sending the results back
+    all_agents.updates.optimize()
     return all_agents.updates
 
 
@@ -93,13 +93,7 @@ class Simulation:
             ray.init()
         self.past_updates = deque[Updates](maxlen=50)
     
-    def apply_updates(self, updates: Updates):
-        """Apply updates to the simulation state."""
-        self.sim_state.apply_updates(updates)
-        # TODO: Detect conflicting updates and handle them
-        self.past_updates.append(updates)
-    
-    def execute_stage(self, stage_tasks: TasksList):
+    def _execute_stage(self, stage_tasks: TasksList):
         """Run a single stage in the simulation."""
         self.sim_state.register_agent_to_state({task.agent.state: task.agent for task in stage_tasks})
         sim_state_ref = ray.put(self.sim_state)
@@ -111,17 +105,9 @@ class Simulation:
                 # Launch remote task with minimal data
                 pending_tasks.append(task_executor.remote(name, task.method.__name__, sim_state_ref))
         
-        # Use ray.wait to process results as they become available
-        while pending_tasks:
-            # Get results as they finish without waiting for all to complete
-            finished_tasks, pending_tasks = ray.wait(pending_tasks, timeout=0.01)
-            if finished_tasks:
-                # Process completed tasks immediately
-                for update_id in finished_tasks:
-                    updates_list = ray.get(update_id)
-                    if isinstance(updates_list, Updates):
-                        updates_list = [updates_list]
-                    [self.apply_updates(u) for u in updates_list]
+        results: list[Updates] = ray.get(pending_tasks)
+        # Apply all updates from the results
+        apply_all_updates(self.sim_state, results)
 
     def step(self, steps: int = 1) -> Iterator[SimState]:
         """Run the simulation in steps."""
@@ -129,7 +115,7 @@ class Simulation:
             self.sim_state.step += 1
             for idx, stage_tasks in enumerate(self.staging):
                 self.sim_state.stage = idx
-                self.execute_stage(stage_tasks)
+                self._execute_stage(stage_tasks)
             yield self.sim_state
     
     def run(self, steps: int) -> SimState:
