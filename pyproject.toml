@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "raysim"
+version = "0.1.0"
+authors = [
+    {name = "Harry Chen", email = "harrychen0805@outlook.com"},
+]
+description = "A distributed simulation framework using Ray."
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "ray[default]",
+    "tqdm",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/harry0805/raysim"
+"Bug Tracker" = "https://github.com/harry0805/raysim/issues"
