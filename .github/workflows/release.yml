@@ -85,8 +85,11 @@ jobs:
         run: |
           python -m build
 
+      - name: Debug dist directory
+        run: ls -la dist/
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
